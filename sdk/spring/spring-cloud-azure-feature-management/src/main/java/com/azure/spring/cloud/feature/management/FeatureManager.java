@@ -32,8 +32,10 @@ import com.azure.spring.cloud.feature.management.implementation.models.VariantRe
 import com.azure.spring.cloud.feature.management.models.FeatureFilterEvaluationContext;
 import com.azure.spring.cloud.feature.management.models.FeatureManagementException;
 import com.azure.spring.cloud.feature.management.models.FilterNotFoundException;
+import com.azure.spring.cloud.feature.management.targeting.ContextualTargetingContextAccessor;
 import com.azure.spring.cloud.feature.management.targeting.TargetingContextAccessor;
 import com.azure.spring.cloud.feature.management.targeting.TargetingEvaluationOptions;
+import com.azure.spring.cloud.feature.management.targeting.TargetingFilterContext;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -53,6 +55,8 @@ public class FeatureManager {
 
     private final TargetingContextAccessor contextAccessor;
 
+    private final ContextualTargetingContextAccessor contextualAccessor;
+
     private final TargetingEvaluationOptions evaluationOptions;
 
     private final ObjectProvider<VariantProperties> propertiesProvider;
@@ -66,11 +70,13 @@ public class FeatureManager {
      */
     FeatureManager(ApplicationContext context, FeatureManagementProperties featureManagementConfigurations,
         FeatureManagementConfigProperties properties, TargetingContextAccessor contextAccessor,
-        TargetingEvaluationOptions evaluationOptions, ObjectProvider<VariantProperties> propertiesProvider) {
+        ContextualTargetingContextAccessor contextualAccessor, TargetingEvaluationOptions evaluationOptions,
+        ObjectProvider<VariantProperties> propertiesProvider) {
         this.context = context;
         this.featureManagementConfigurations = featureManagementConfigurations;
         this.properties = properties;
         this.contextAccessor = contextAccessor;
+        this.contextualAccessor = contextualAccessor;
         this.evaluationOptions = evaluationOptions;
         this.propertiesProvider = propertiesProvider;
     }
@@ -99,6 +105,34 @@ public class FeatureManager {
      */
     public Boolean isEnabled(String feature) throws FilterNotFoundException {
         return checkFeature(feature, null).block();
+    }
+
+    /**
+     * Checks to see if the feature is enabled. If enabled it check each filter, once a single filter returns true it
+     * returns true. If no filter returns true, it returns false. If there are no filters, it returns true. If feature
+     * isn't found it returns false.
+     *
+     * @param feature Feature being checked.
+     * @param featureContext Local context
+     * @return state of the feature
+     * @throws FilterNotFoundException file not found
+     */
+    public Mono<Boolean> isEnabledAsync(String feature, Object featureContext) {
+        return checkFeature(feature, featureContext);
+    }
+
+    /**
+     * Checks to see if the feature is enabled. If enabled it check each filter, once a single filter returns true it
+     * returns true. If no filter returns true, it returns false. If there are no filters, it returns true. If feature
+     * isn't found it returns false.
+     *
+     * @param feature Feature being checked.
+     * @param featureContext Local context
+     * @return state of the feature
+     * @throws FilterNotFoundException file not found
+     */
+    public Boolean isEnabled(String feature, Object featureContext) throws FilterNotFoundException {
+        return checkFeature(feature, featureContext).block();
     }
 
     /**
@@ -174,11 +208,11 @@ public class FeatureManager {
                     // Feature is on by Feature Flags, check allocation
                     validateVariant(feature);
 
-                    VariantAssignment variantAssignment = new VariantAssignment(contextAccessor, evaluationOptions,
+                    VariantAssignment variantAssignment = new VariantAssignment(evaluationOptions,
                         propertiesProvider);
                     // Checking if allocation overrides true result
                     return checkDefaultOverride(feature.getVariants().values(), true,
-                        variantAssignment.assignVariant(feature.getAllocation()));
+                        variantAssignment.assignVariant(feature.getAllocation(), buildContext(featureContext)));
                 } else if (filterAssignedValue) {
                     return true;
                 }
@@ -227,8 +261,7 @@ public class FeatureManager {
 
         validateVariant(feature);
 
-        VariantAssignment variantAssignment = new VariantAssignment(contextAccessor, evaluationOptions,
-            propertiesProvider);
+        VariantAssignment variantAssignment = new VariantAssignment(evaluationOptions, propertiesProvider);
 
         Collection<VariantReference> variants = feature.getVariants().values();
         String defaultDisabledVariant = feature.getAllocation().getDefaultWhenDisabled();
@@ -239,11 +272,13 @@ public class FeatureManager {
         } else if (!feature.getEvaluate()) {
             return Mono.justOrEmpty(null);
         } else if (feature.getEnabledFor().size() == 0) {
-            return variantAssignment.getVariant(variants, variantAssignment.assignVariant(feature.getAllocation()));
+            return variantAssignment.getVariant(variants,
+                variantAssignment.assignVariant(feature.getAllocation(), buildContext(featureContext)));
         }
 
         List<Mono<Boolean>> results = new ArrayList<>();
-
+        
+        
         for (FeatureFilterEvaluationContext featureFilter : feature.getEnabledFor().values()) {
             if (StringUtils.hasText(featureFilter.getName())) {
                 results.add(isFeatureOn(featureFilter, feature.getKey(), featureContext));
@@ -251,11 +286,12 @@ public class FeatureManager {
         }
         return evaluateFeatureFlagResults(feature, results).flatMap(enabled -> {
             if (!enabled && StringUtils.hasText(defaultDisabledVariant)) {
-                return variantAssignment.getVariant(feature.getVariants().values(), defaultDisabledVariant).single();
+                return variantAssignment.getVariant(variants, defaultDisabledVariant).single();
             } else if (!enabled) {
                 return Mono.justOrEmpty(null);
             }
-            return variantAssignment.getVariant(variants, variantAssignment.assignVariant(feature.getAllocation()));
+            return variantAssignment.getVariant(variants,
+                variantAssignment.assignVariant(feature.getAllocation(), buildContext(featureContext)));
         });
     }
 
@@ -308,6 +344,21 @@ public class FeatureManager {
             }
         }
         return Mono.just(false);
+    }
+
+    private TargetingFilterContext buildContext(Object appContext) {
+        TargetingFilterContext targetingContext = new TargetingFilterContext();
+        if (contextualAccessor != null && (appContext != null || contextAccessor == null)) {
+            // Use this if, there is an appContext + the contextualAccessor, or there is no contextAccessor.
+            contextualAccessor.configureTargetingContext(targetingContext, appContext);
+            return targetingContext;
+        }
+        if (contextAccessor != null) {
+            // If this is the only one provided just use it.
+            contextAccessor.configureTargetingContext(targetingContext);
+            return targetingContext;
+        }
+        throw new FeatureManagementException("No Targeting Filter Context found to assign variant.");
     }
 
     /**
