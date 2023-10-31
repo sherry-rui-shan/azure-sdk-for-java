@@ -4,10 +4,8 @@ package com.azure.spring.cloud.feature.management;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
 import java.util.HashMap;
@@ -48,7 +46,7 @@ public class FeatureManagerVariantTest {
 
     @Mock
     private FeatureManagementProperties featureManagementPropertiesMock;
-
+    
     @Mock
     private TargetingContextAccessor contextAccessorMock;
 
@@ -57,8 +55,7 @@ public class FeatureManagerVariantTest {
         MockitoAnnotations.openMocks(this);
         when(properties.isFailFast()).thenReturn(true);
 
-        featureManager = new FeatureManager(context, featureManagementPropertiesMock, properties, contextAccessorMock,
-            null, null);
+        featureManager = new FeatureManager(context, featureManagementPropertiesMock, properties, contextAccessorMock, null, null);
     }
 
     @AfterEach
@@ -89,11 +86,16 @@ public class FeatureManagerVariantTest {
     @Test
     public void noAssigner() {
         featureManager = new FeatureManager(context, featureManagementPropertiesMock, properties, null, null, null);
-
+        
         HashMap<String, Feature> features = new HashMap<>();
         Feature feature = new Feature();
         feature.setKey("No Assigner");
-        feature.setVariants(createVariants());
+        Map<String, VariantReference> variants = new HashMap<>();
+        VariantReference small = new VariantReference();
+        small.setName("small");
+        small.setConfigurationValue(1);
+        variants.put("small", small);
+        feature.setVariants(variants);
         features.put("No Assigner", feature);
 
         when(featureManagementPropertiesMock.getFeatureManagement()).thenReturn(features);
@@ -101,26 +103,36 @@ public class FeatureManagerVariantTest {
             () -> featureManager.getVariant("No Assigner"));
         assertThat(e).hasMessage("No Targeting Filter Context found to assign variant.");
     }
-
+    
     @Test
     public void noAssignmentNoDefault() {
         HashMap<String, Feature> features = new HashMap<>();
         Feature feature = new Feature();
         feature.setKey("No Assigner");
-        feature.setVariants(createVariants());
+        Map<String, VariantReference> variants = new HashMap<>();
+        VariantReference small = new VariantReference();
+        small.setName("small");
+        small.setConfigurationValue(1);
+        variants.put("small", small);
+        feature.setVariants(variants);
         feature.setAllocation(new Allocation());
         features.put("No Assigner", feature);
 
-        when(featureManagementPropertiesMock.getFeatureManagement()).thenReturn(features);
+        when(featureManagementPropertiesMock.getFeatureManagement()).thenReturn(features);        
         assertNull(featureManager.getVariant("No Assigner"));
     }
-
+    
     @Test
     public void noAssignmentDefaultEnabled() {
         HashMap<String, Feature> features = new HashMap<>();
         Feature feature = new Feature();
         feature.setKey("No Assigner");
-        feature.setVariants(createVariants());
+        Map<String, VariantReference> variants = new HashMap<>();
+        VariantReference small = new VariantReference();
+        small.setName("small");
+        small.setConfigurationValue(1);
+        variants.put("small", small);
+        feature.setVariants(variants);
         Allocation allocation = new Allocation();
         allocation.setDefaultWhenEnabled("small");
         feature.setAllocation(allocation);
@@ -131,14 +143,19 @@ public class FeatureManagerVariantTest {
         assertEquals(result.getName(), "small");
         assertEquals(result.getValue(), 1);
     }
-
+    
     @Test
     public void noAssignmentDefaultDisabled() {
         HashMap<String, Feature> features = new HashMap<>();
         Feature feature = new Feature();
         feature.setKey("No Assigner");
         feature.setEvaluate(false);
-        feature.setVariants(createVariants());
+        Map<String, VariantReference> variants = new HashMap<>();
+        VariantReference large = new VariantReference();
+        large.setName("large");
+        large.setConfigurationValue("9");
+        variants.put("large", large);
+        feature.setVariants(variants);
         Allocation allocation = new Allocation();
         allocation.setDefaultWhenDisabled("large");
         feature.setAllocation(allocation);
@@ -147,16 +164,21 @@ public class FeatureManagerVariantTest {
         when(featureManagementPropertiesMock.getFeatureManagement()).thenReturn(features);
         Variant result = featureManager.getVariant("No Assigner");
         assertEquals(result.getName(), "large");
-        assertEquals(result.getValue(), 9);
+        assertEquals(result.getValue(), "9");
     }
-
+    
     @Test
     public void disabledNoDefaultDisabled() {
         HashMap<String, Feature> features = new HashMap<>();
         Feature feature = new Feature();
         feature.setKey("No Assigner");
         feature.setEvaluate(false);
-        feature.setVariants(createVariants());
+        Map<String, VariantReference> variants = new HashMap<>();
+        VariantReference large = new VariantReference();
+        large.setName("large");
+        large.setConfigurationValue("9");
+        variants.put("large", large);
+        feature.setVariants(variants);
         Allocation allocation = new Allocation();
         feature.setAllocation(allocation);
         features.put("No Assigner", feature);
@@ -165,13 +187,18 @@ public class FeatureManagerVariantTest {
         Variant result = featureManager.getVariant("No Assigner");
         assertNull(result);
     }
-
+    
     @Test
     public void enabledFilterDefault() {
         HashMap<String, Feature> features = new HashMap<>();
         Feature feature = new Feature();
         feature.setKey("No Assigner");
-        feature.setVariants(createVariants());
+        Map<String, VariantReference> variants = new HashMap<>();
+        VariantReference small = new VariantReference();
+        small.setName("small");
+        small.setConfigurationValue(1);
+        variants.put("small", small);
+        feature.setVariants(variants);
         Allocation allocation = new Allocation();
         allocation.setDefaultWhenEnabled("small");
         feature.setAllocation(allocation);
@@ -189,13 +216,18 @@ public class FeatureManagerVariantTest {
         assertEquals(result.getName(), "small");
         assertEquals(result.getValue(), 1);
     }
-
+    
     @Test
     public void enabledFilterDefaultAnyTrue() {
         HashMap<String, Feature> features = new HashMap<>();
         Feature feature = new Feature();
         feature.setKey("No Assigner");
-        feature.setVariants(createVariants());
+        Map<String, VariantReference> variants = new HashMap<>();
+        VariantReference small = new VariantReference();
+        small.setName("small");
+        small.setConfigurationValue(1);
+        variants.put("small", small);
+        feature.setVariants(variants);
         Allocation allocation = new Allocation();
         allocation.setDefaultWhenEnabled("small");
         feature.setAllocation(allocation);
@@ -214,13 +246,18 @@ public class FeatureManagerVariantTest {
         assertEquals(result.getName(), "small");
         assertEquals(result.getValue(), 1);
     }
-
+    
     @Test
     public void enabledFilterDefaultAnyTrueJustOne() {
         HashMap<String, Feature> features = new HashMap<>();
         Feature feature = new Feature();
         feature.setKey("No Assigner");
-        feature.setVariants(createVariants());
+        Map<String, VariantReference> variants = new HashMap<>();
+        VariantReference small = new VariantReference();
+        small.setName("small");
+        small.setConfigurationValue(1);
+        variants.put("small", small);
+        feature.setVariants(variants);
         Allocation allocation = new Allocation();
         allocation.setDefaultWhenEnabled("small");
         feature.setAllocation(allocation);
@@ -243,14 +280,19 @@ public class FeatureManagerVariantTest {
         assertEquals(result.getName(), "small");
         assertEquals(result.getValue(), 1);
     }
-
+    
     @Test
     public void enabledFilterDefaultAllTrue() {
         HashMap<String, Feature> features = new HashMap<>();
         Feature feature = new Feature();
         feature.setKey("No Assigner");
         feature.setRequirementType("All");
-        feature.setVariants(createVariants());
+        Map<String, VariantReference> variants = new HashMap<>();
+        VariantReference small = new VariantReference();
+        small.setName("small");
+        small.setConfigurationValue(1);
+        variants.put("small", small);
+        feature.setVariants(variants);
         Allocation allocation = new Allocation();
         allocation.setDefaultWhenEnabled("small");
         feature.setAllocation(allocation);
@@ -269,14 +311,23 @@ public class FeatureManagerVariantTest {
         assertEquals(result.getName(), "small");
         assertEquals(result.getValue(), 1);
     }
-
+    
     @Test
     public void enabledFilterDefaultAllTrueJustOne() {
         HashMap<String, Feature> features = new HashMap<>();
         Feature feature = new Feature();
         feature.setKey("No Assigner");
         feature.setRequirementType("All");
-        feature.setVariants(createVariants());
+        Map<String, VariantReference> variants = new HashMap<>();
+        VariantReference small = new VariantReference();
+        small.setName("small");
+        small.setConfigurationValue(1);
+        variants.put("small", small);
+        VariantReference large = new VariantReference();
+        large.setName("large");
+        large.setConfigurationValue(9);
+        variants.put("small", large);
+        feature.setVariants(variants);
         Allocation allocation = new Allocation();
         allocation.setDefaultWhenEnabled("small");
         allocation.setDefaultWhenDisabled("large");
@@ -300,14 +351,23 @@ public class FeatureManagerVariantTest {
         assertEquals(result.getName(), "large");
         assertEquals(result.getValue(), 9);
     }
-
+    
     @Test
     public void enabledFilterDefaultAllTrueJustOneNoDefault() {
         HashMap<String, Feature> features = new HashMap<>();
         Feature feature = new Feature();
         feature.setKey("No Assigner");
         feature.setRequirementType("All");
-        feature.setVariants(createVariants());
+        Map<String, VariantReference> variants = new HashMap<>();
+        VariantReference small = new VariantReference();
+        small.setName("small");
+        small.setConfigurationValue(1);
+        variants.put("small", small);
+        VariantReference large = new VariantReference();
+        large.setName("large");
+        large.setConfigurationValue(9);
+        variants.put("small", large);
+        feature.setVariants(variants);
         Allocation allocation = new Allocation();
         allocation.setDefaultWhenEnabled("small");
         feature.setAllocation(allocation);
@@ -329,111 +389,7 @@ public class FeatureManagerVariantTest {
         Variant result = featureManager.getVariant("No Assigner");
         assertNull(result);
     }
-
-    @Test
-    public void allOnVariantOverride() {
-        HashMap<String, Feature> features = new HashMap<>();
-        Feature feature = new Feature();
-        feature.setKey("On");
-        HashMap<Integer, FeatureFilterEvaluationContext> filters = new HashMap<Integer, FeatureFilterEvaluationContext>();
-        FeatureFilterEvaluationContext alwaysOn = new FeatureFilterEvaluationContext();
-        alwaysOn.setName("AlwaysOn");
-        filters.put(0, alwaysOn);
-        filters.put(1, alwaysOn);
-        feature.setEnabledFor(filters);
-        feature.setRequirementType("All");
-        feature.setVariants(createVariants());
-        Allocation allocation = new Allocation();
-        allocation.setDefaultWhenEnabled("large");
-        feature.setAllocation(allocation);
-        features.put("On", feature);
-        when(featureManagementPropertiesMock.getFeatureManagement()).thenReturn(features);
-
-        when(context.getBean(Mockito.matches("AlwaysOn"))).thenReturn(new AlwaysOnFilter())
-            .thenReturn(new AlwaysOnFilter());
-
-        assertFalse(featureManager.isEnabledAsync("On").block());
-    }
-
-    @Test
-    public void allOnVariantOverrideNoDefault() {
-        HashMap<String, Feature> features = new HashMap<>();
-        Feature feature = new Feature();
-        feature.setKey("On");
-        HashMap<Integer, FeatureFilterEvaluationContext> filters = new HashMap<Integer, FeatureFilterEvaluationContext>();
-        FeatureFilterEvaluationContext alwaysOn = new FeatureFilterEvaluationContext();
-        alwaysOn.setName("AlwaysOn");
-        filters.put(0, alwaysOn);
-        filters.put(1, alwaysOn);
-        feature.setEnabledFor(filters);
-        feature.setRequirementType("All");
-        feature.setVariants(createVariants());
-        Allocation allocation = new Allocation();
-        feature.setAllocation(allocation);
-        features.put("On", feature);
-        when(featureManagementPropertiesMock.getFeatureManagement()).thenReturn(features);
-
-        when(context.getBean(Mockito.matches("AlwaysOn"))).thenReturn(new AlwaysOnFilter())
-            .thenReturn(new AlwaysOnFilter());
-
-        assertTrue(featureManager.isEnabledAsync("On").block());
-    }
     
-
-    @Test
-    public void allOnVariantOverrideInvalidVariant() {
-        HashMap<String, Feature> features = new HashMap<>();
-        Feature feature = new Feature();
-        feature.setKey("On");
-        HashMap<Integer, FeatureFilterEvaluationContext> filters = new HashMap<Integer, FeatureFilterEvaluationContext>();
-        FeatureFilterEvaluationContext alwaysOn = new FeatureFilterEvaluationContext();
-        alwaysOn.setName("AlwaysOn");
-        filters.put(0, alwaysOn);
-        filters.put(1, alwaysOn);
-        feature.setEnabledFor(filters);
-        feature.setRequirementType("All");
-        feature.setVariants(createVariants());
-        Allocation allocation = new Allocation();
-        allocation.setDefaultWhenEnabled("mediumn");
-        feature.setAllocation(allocation);
-        features.put("On", feature);
-        when(featureManagementPropertiesMock.getFeatureManagement()).thenReturn(features);
-
-        when(context.getBean(Mockito.matches("AlwaysOn"))).thenReturn(new AlwaysOnFilter())
-            .thenReturn(new AlwaysOnFilter());
-
-        assertTrue(featureManager.isEnabledAsync("On").block());
-    }
-    
-    @Test
-    public void noFiltersButVariants() {
-        HashMap<String, Feature> features = new HashMap<>();
-        Feature feature = new Feature();
-        feature.setKey("On");
-        feature.setRequirementType("All");
-        feature.setVariants(createVariants());
-        Allocation allocation = new Allocation();
-        allocation.setDefaultWhenDisabled("small");
-        feature.setAllocation(allocation);
-        features.put("On", feature);
-        when(featureManagementPropertiesMock.getFeatureManagement()).thenReturn(features);
-
-        when(context.getBean(Mockito.matches("AlwaysOn"))).thenReturn(new AlwaysOnFilter())
-            .thenReturn(new AlwaysOnFilter());
-
-        assertTrue(featureManager.isEnabledAsync("On").block());
-    }
-
-
-    private Map<String, VariantReference> createVariants() {
-        Map<String, VariantReference> variants = new HashMap<>();
-        variants.put("small",
-            new VariantReference().setName("small").setConfigurationValue(1).setStatusOverride("true"));
-        variants.put("large",
-            new VariantReference().setName("large").setConfigurationValue(9).setStatusOverride("false"));
-        return variants;
-    }
-
     class AlwaysOnFilter implements FeatureFilter {
 
         @Override

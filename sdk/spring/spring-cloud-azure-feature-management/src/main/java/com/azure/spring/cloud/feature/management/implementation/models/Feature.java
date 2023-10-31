@@ -33,7 +33,7 @@ public class Feature {
     private Allocation allocation = new Allocation();
 
     @JsonProperty("variants")
-    private Map<String, VariantReference> variants = new HashMap<>();
+    private Map<String, VariantReference> variants;
 
     /**
      * @return the key
