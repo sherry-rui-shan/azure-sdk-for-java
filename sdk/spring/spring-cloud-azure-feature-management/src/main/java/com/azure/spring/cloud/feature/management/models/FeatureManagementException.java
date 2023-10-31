@@ -20,7 +20,7 @@ public final class FeatureManagementException extends RuntimeException {
      *
      * @param message the error message.
      */
-    public FeatureManagementException(String message) {
+    FeatureManagementException(String message) {
         super(message);
         this.message = message;
     }
@@ -31,7 +31,7 @@ public final class FeatureManagementException extends RuntimeException {
      * @param message the error message.
      * @param cause the original error thrown, typically of NoSuchBeanDefinitionException type.
      */
-    public FeatureManagementException(String message, Throwable cause) {
+    FeatureManagementException(String message, Throwable cause) {
         super(message, cause);
         this.message = message;
     }

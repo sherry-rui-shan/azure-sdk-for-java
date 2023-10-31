@@ -24,16 +24,10 @@ public class Feature {
     private Boolean evaluate = true;
 
     @JsonProperty("requirement-type")
-    private String requirementType = DEFAULT_REQUIREMENT_TYPE;
+    private String requirementType = DEFAULT_REQUIREMENT_TYPE;;
 
     @JsonProperty("enabled-for")
-    private Map<Integer, FeatureFilterEvaluationContext> enabledFor = new HashMap<>();
-
-    @JsonProperty("allocation")
-    private Allocation allocation = new Allocation();
-
-    @JsonProperty("variants")
-    private Map<String, VariantReference> variants;
+    private Map<Integer, FeatureFilterEvaluationContext> enabledFor;
 
     /**
      * @return the key
@@ -89,34 +83,6 @@ public class Feature {
      */
     public void setRequirementType(String requirementType) {
         this.requirementType = requirementType;
-    }
-
-    /**
-     * @return the allocation
-     */
-    public Allocation getAllocation() {
-        return allocation;
-    }
-
-    /**
-     * @param allocation the allocation to set
-     */
-    public void setAllocation(Allocation allocation) {
-        this.allocation = allocation;
-    }
-
-    /**
-     * @return the variants
-     */
-    public Map<String, VariantReference> getVariants() {
-        return variants;
-    }
-
-    /**
-     * @param variants the variants to set
-     */
-    public void setVariants(Map<String, VariantReference> variants) {
-        this.variants = variants;
     }
 
 }
