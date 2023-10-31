@@ -20,7 +20,6 @@ import com.azure.spring.cloud.feature.management.implementation.targeting.Exclus
 import com.azure.spring.cloud.feature.management.implementation.targeting.GroupRollout;
 import com.azure.spring.cloud.feature.management.models.FeatureFilterEvaluationContext;
 import com.azure.spring.cloud.feature.management.models.TargetingException;
-import com.azure.spring.cloud.feature.management.targeting.ContextualTargetingContextAccessor;
 import com.azure.spring.cloud.feature.management.targeting.TargetingContextAccessor;
 import com.azure.spring.cloud.feature.management.targeting.TargetingEvaluationOptions;
 import com.azure.spring.cloud.feature.management.targeting.TargetingFilterContext;
@@ -31,7 +30,7 @@ import com.fasterxml.jackson.databind.json.JsonMapper;
 /**
  * `Microsoft.TargetingFilter` enables evaluating a user/group/overall rollout of a feature.
  */
-public class TargetingFilter implements FeatureFilter, ContextualFeatureFilter {
+public class TargetingFilter implements FeatureFilter {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(TargetingFilter.class);
 
@@ -76,11 +75,6 @@ public class TargetingFilter implements FeatureFilter, ContextualFeatureFilter {
     protected final TargetingContextAccessor contextAccessor;
 
     /**
-     * Accessor for identifying the current user/group when evaluating when providing context 
-     */
-    protected final ContextualTargetingContextAccessor contextualAccessor;
-
-    /**
      * Options for evaluating the filter
      */
     protected final TargetingEvaluationOptions options;
@@ -92,7 +86,6 @@ public class TargetingFilter implements FeatureFilter, ContextualFeatureFilter {
      */
     public TargetingFilter(TargetingContextAccessor contextAccessor) {
         this.contextAccessor = contextAccessor;
-        this.contextualAccessor = null;
         this.options = new TargetingEvaluationOptions();
     }
 
@@ -104,56 +97,19 @@ public class TargetingFilter implements FeatureFilter, ContextualFeatureFilter {
      */
     public TargetingFilter(TargetingContextAccessor contextAccessor, TargetingEvaluationOptions options) {
         this.contextAccessor = contextAccessor;
-        this.contextualAccessor = null;
         this.options = options;
-    }
-
-    /**
-     * `Microsoft.TargetingFilter` evaluates a user/group/overall rollout of a feature.
-     * 
-     * @param contextualAccessor Context for evaluating the users/groups.
-     * @param options enables customization of the filter.
-     */
-    public TargetingFilter(ContextualTargetingContextAccessor contextualAccessor, TargetingEvaluationOptions options) {
-        this.contextAccessor = null;
-        this.contextualAccessor = contextualAccessor;
-        this.options = options;
-    }
-
-    /**
-     * `Microsoft.TargetingFilter` evaluates a user/group/overall rollout of a feature.
-     * 
-     * @param contextualAccessor Context for evaluating the users/groups.
-     */
-    public TargetingFilter(ContextualTargetingContextAccessor contextualAccessor) {
-        this.contextAccessor = null;
-        this.contextualAccessor = contextualAccessor;
-        this.options = new TargetingEvaluationOptions();
     }
 
     @Override
-    public boolean evaluate(FeatureFilterEvaluationContext context) {
-        return evaluate(context, null);
-    }
-
     @SuppressWarnings("unchecked")
-    @Override
-    public boolean evaluate(FeatureFilterEvaluationContext context, Object appContext) {
-
+    public boolean evaluate(FeatureFilterEvaluationContext context) {
         if (context == null) {
             throw new IllegalArgumentException("Targeting Context not configured.");
         }
 
         TargetingFilterContext targetingContext = new TargetingFilterContext();
-        
-        if (contextualAccessor != null && (appContext != null || contextAccessor == null)) {
-            // Use this if, there is an appContext + the contextualAccessor, or there is no contextAccessor.
-            contextualAccessor.configureTargetingContext(targetingContext, appContext);
-        }
-        if (contextAccessor != null) {
-            // If this is the only one provided just use it.
-            contextAccessor.configureTargetingContext(targetingContext);
-        }
+
+        contextAccessor.configureTargetingContext(targetingContext);
 
         if (validateTargetingContext(targetingContext)) {
             LOGGER.warn("No targeting context available for targeting evaluation.");
@@ -272,7 +228,7 @@ public class TargetingFilter implements FeatureFilter, ContextualFeatureFilter {
 
         return (!hasUserDefined && !(hasGroupsDefined && hasAtLeastOneGroup));
     }
-
+    
     /**
      * Computes the percentage that the contextId falls into.
      * 

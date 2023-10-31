@@ -23,14 +23,12 @@ import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
 
-import com.azure.spring.cloud.feature.management.filters.ContextualFeatureFilter;
 import com.azure.spring.cloud.feature.management.filters.FeatureFilter;
 import com.azure.spring.cloud.feature.management.implementation.FeatureManagementConfigProperties;
 import com.azure.spring.cloud.feature.management.implementation.FeatureManagementProperties;
 import com.azure.spring.cloud.feature.management.implementation.models.Feature;
 import com.azure.spring.cloud.feature.management.models.FeatureFilterEvaluationContext;
 import com.azure.spring.cloud.feature.management.models.FilterNotFoundException;
-import com.azure.spring.cloud.feature.management.targeting.ContextualTargetingContextAccessor;
 
 /**
  * Unit tests for FeatureManager.
@@ -49,16 +47,12 @@ public class FeatureManagerTest {
     @Mock
     private FeatureManagementProperties featureManagementPropertiesMock;
 
-    @Mock
-    private ContextualTargetingContextAccessor contextualAccessor;
-
     @BeforeEach
     public void setup() {
         MockitoAnnotations.openMocks(this);
         when(properties.isFailFast()).thenReturn(true);
 
-        featureManager = new FeatureManager(context, featureManagementPropertiesMock, properties, null, null, null,
-            null);
+        featureManager = new FeatureManager(context, featureManagementPropertiesMock, properties, null, null, null);
     }
 
     @AfterEach
@@ -108,7 +102,7 @@ public class FeatureManagerTest {
     }
 
     @Test
-    public void isEnabledOn() throws InterruptedException, ExecutionException, FilterNotFoundException {
+    public void isEnabledON() throws InterruptedException, ExecutionException, FilterNotFoundException {
         HashMap<String, Feature> features = new HashMap<>();
         Feature onFeature = new Feature();
         onFeature.setKey("On");
@@ -122,27 +116,7 @@ public class FeatureManagerTest {
 
         when(context.getBean(Mockito.matches("AlwaysOn"))).thenReturn(new AlwaysOnFilter());
 
-        assertTrue(featureManager.isEnabled("On"));
         assertTrue(featureManager.isEnabledAsync("On").block());
-    }
-
-    @Test
-    public void isEnabledOnContext() throws InterruptedException, ExecutionException, FilterNotFoundException {
-        HashMap<String, Feature> features = new HashMap<>();
-        Feature onFeature = new Feature();
-        onFeature.setKey("On");
-        HashMap<Integer, FeatureFilterEvaluationContext> filters = new HashMap<Integer, FeatureFilterEvaluationContext>();
-        FeatureFilterEvaluationContext alwaysOn = new FeatureFilterEvaluationContext();
-        alwaysOn.setName("AlwaysOnContext");
-        filters.put(0, alwaysOn);
-        onFeature.setEnabledFor(filters);
-        features.put("On", onFeature);
-        when(featureManagementPropertiesMock.getFeatureManagement()).thenReturn(features);
-
-        when(context.getBean(Mockito.matches("AlwaysOnContext"))).thenReturn(new AlwaysOnContextFilter());
-
-        assertFalse(featureManager.isEnabled("On", false));
-        assertFalse(featureManager.isEnabledAsync("On", false).block());
     }
 
     @Test
@@ -234,17 +208,7 @@ public class FeatureManagerTest {
         public boolean evaluate(FeatureFilterEvaluationContext context) {
             return true;
         }
-    }
 
-    class AlwaysOnContextFilter implements ContextualFeatureFilter {
-
-        @Override
-        public boolean evaluate(FeatureFilterEvaluationContext context, Object localContext) {
-            if (localContext == Boolean.FALSE) {
-                return false;
-            }
-            return true;
-        }
     }
 
     class AlwaysOffFilter implements FeatureFilter {
@@ -253,6 +217,7 @@ public class FeatureManagerTest {
         public boolean evaluate(FeatureFilterEvaluationContext context) {
             return false;
         }
+
     }
 
 }
